@@ -25,19 +25,55 @@ class State:
         return self.tiles.index(0)
 
     def neighbors(self) -> List["State"]:
-        """Retorna os estados filhos válidos a partir deste estado."""
-        # TODO: implemente a geração de estados filhos
-        raise NotImplementedError
+        """Retorna os estados filhos válidos a partir deste estado.
+
+        Cada filho corresponde a deslizar uma peça para o espaço vazio, ou seja,
+        a mover o ESPAÇO VAZIO em uma das quatro direções (quando não sai do
+        tabuleiro 3x3). O `cost` de cada filho é `self.cost + 1`.
+        """
+        i = self.blank_index           # índice plano (0..8) do espaço vazio
+        row, col = divmod(i, 3)        # linha e coluna correspondentes
+
+        # Movimento do ESPAÇO VAZIO -> deslocamento (dlinha, dcoluna)
+        moves = {
+            "UP":    (-1, 0),
+            "DOWN":  (1, 0),
+            "LEFT":  (0, -1),
+            "RIGHT": (0, 1),
+        }
+
+        children: List["State"] = []
+        for action, (dr, dc) in moves.items():
+            nr, nc = row + dr, col + dc
+            if 0 <= nr < 3 and 0 <= nc < 3:        # continua dentro do tabuleiro
+                j = nr * 3 + nc                    # índice plano do destino
+                tiles = list(self.tiles)
+                tiles[i], tiles[j] = tiles[j], tiles[i]   # troca vazio <-> peça
+                children.append(
+                    State(tuple(tiles), parent=self, action=action, cost=self.cost + 1)
+                )
+        return children
 
     def path(self) -> List["State"]:
-        """Retorna a sequência de estados do estado inicial até este."""
-        # TODO: implemente a reconstrução do caminho usando self.parent
-        raise NotImplementedError
+        """Retorna a sequência de estados do estado inicial até este.
+
+        Sobe pelos ponteiros `parent` até a raiz e inverte a ordem.
+        """
+        sequence: List["State"] = []
+        node: Optional["State"] = self
+        while node is not None:
+            sequence.append(node)
+            node = node.parent
+        sequence.reverse()
+        return sequence
 
     def actions(self) -> List[str]:
-        """Retorna a sequência de ações do estado inicial até este."""
-        # TODO: implemente usando path()
-        raise NotImplementedError
+        """Retorna a sequência de ações do estado inicial até este.
+
+        Reaproveita path(): cada estado (exceto o inicial) guarda em `action`
+        o movimento que o gerou.
+        """
+        return [state.action for state in self.path() if state.action is not None]
 
     def __eq__(self, other: object) -> bool:
         return isinstance(other, State) and self.tiles == other.tiles
